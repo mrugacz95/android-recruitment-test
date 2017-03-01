@@ -9,10 +9,6 @@ import dog.snow.androidrecruittest.injection.components.NetComponent;
 import dog.snow.androidrecruittest.injection.modules.ApiClientModule;
 import dog.snow.androidrecruittest.injection.modules.AppModule;
 
-/**
- * Created by mruga on 01.03.2017.
- */
-
 public class MyApp extends Application{
 
     private NetComponent mNetComponent;

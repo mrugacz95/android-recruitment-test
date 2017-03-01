@@ -1,6 +1,5 @@
 package dog.snow.androidrecruittest.injection.modules;
 
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -22,7 +21,6 @@ import dagger.Provides;
 import dog.snow.androidrecruittest.models.Item;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;

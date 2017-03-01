@@ -6,8 +6,10 @@ import com.google.gson.annotations.SerializedName;
         import java.util.Date;
 
         import lombok.Data;
+        import lombok.Getter;
 
 @Data
+@Getter
 public class Item {
 
     @SerializedName("id")
