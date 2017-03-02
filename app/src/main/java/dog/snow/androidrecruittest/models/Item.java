@@ -3,17 +3,18 @@ package dog.snow.androidrecruittest.models;
         import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-        import java.util.Date;
+import java.util.Date;
 
-        import lombok.Data;
-        import lombok.Getter;
+import io.realm.RealmObject;
+import io.realm.annotations.PrimaryKey;
+import lombok.Getter;
 
-@Data
 @Getter
-public class Item {
+public class Item extends RealmObject{
 
     @SerializedName("id")
     @Expose
+    @PrimaryKey
     public int id;
     @SerializedName("name")
     @Expose
