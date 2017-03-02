@@ -1,10 +1,8 @@
 package dog.snow.androidrecruittest.activities;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
@@ -26,14 +24,11 @@ import dog.snow.androidrecruittest.adapters.ItemAdapter;
 import dog.snow.androidrecruittest.injection.modules.ApiClientModule;
 import dog.snow.androidrecruittest.models.Item;
 import io.realm.Realm;
-import io.realm.RealmQuery;
 import io.realm.RealmResults;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-
-import static dog.snow.androidrecruittest.R.layout.item;
 
 public class MainActivity extends AppCompatActivity {
     @Inject
@@ -46,17 +41,18 @@ public class MainActivity extends AppCompatActivity {
     TextView emptyList;
     @BindView(R.id.search_et)
     EditText search;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        ((MyApp)getApplication()).getNetComponent().inject(this);
+        ((MyApp) getApplication()).getNetComponent().inject(this);
         search.clearFocus();
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(new ItemAdapter(this, new ArrayList<>()));
-        swipeRefreshLayout.setOnRefreshListener(this::readData);
+        swipeRefreshLayout.setOnRefreshListener(this::getData);
         search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -66,18 +62,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 Realm myRealm = Realm.getDefaultInstance();
-                ((ItemAdapter)recyclerView.getAdapter()).clear();
-                String query = "*"+charSequence.toString()+"*";
+                ((ItemAdapter) recyclerView.getAdapter()).clear();
+                String query = "*" + charSequence.toString() + "*";
                 RealmResults<Item> realmResults = myRealm.where(Item.class)
                         .beginGroup()
-                        .like("description",query)
+                        .like("description", query)
                         .or()
-                        .like("name",query)
+                        .like("name", query)
                         .endGroup()
                         .findAllAsync();
-                for(Item item : realmResults){
-                    ((ItemAdapter) recyclerView.getAdapter()).addItem(item);
-                }
+                realmResults.addChangeListener((collection, changeSet) -> {
+                    ItemAdapter itemAdapter =((ItemAdapter) recyclerView.getAdapter());
+                    for (Item item1 : realmResults) {
+                        itemAdapter.addItem(item1);
+                    }
+                    itemAdapter.notifyDataSetChanged();
+                    myRealm.close();
+
+                });
             }
 
             @Override
@@ -89,12 +91,13 @@ public class MainActivity extends AppCompatActivity {
         getData();
 
     }
-    private void getData(){
+
+    private void getData() {
         Realm myRealm = Realm.getDefaultInstance();
         apiClient.getItems()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .flatMap( items -> {
+                .flatMap(items -> {
                     myRealm.beginTransaction();
                     return Observable.from(items);
                 })
@@ -103,41 +106,45 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onCompleted() {
                         emptyList.setVisibility(View.GONE);
-                        Log.d("Realm","complited transaction");
+                        Log.d("Realm", "complited transaction");
                         myRealm.commitTransaction();
-                        //readData();
+                        readData();
                         myRealm.close();
                     }
 
                     @Override
                     public void onError(Throwable e) {
-                        Log.d("Api response",Log.getStackTraceString(e));
+                        myRealm.close();
+                        readData();
                     }
 
                     @Override
                     public void onNext(Item item) {
-                        Log.d("Api response", item.getName() );
+                        Log.d("Api response", item.getName());
                         myRealm.copyToRealmOrUpdate(item);
 
 
                     }
                 });
     }
-    private void readData(){
-        ((ItemAdapter)recyclerView.getAdapter()).clear();
 
-        ItemAdapter itemAdapter = ((ItemAdapter)recyclerView.getAdapter());
+    private void readData() {
+        ((ItemAdapter) recyclerView.getAdapter()).clear();
+
+        ItemAdapter itemAdapter = ((ItemAdapter) recyclerView.getAdapter());
         Realm myRealm = Realm.getDefaultInstance();
-        RealmResults<Item> results = myRealm.where(Item.class).findAll();
-        results.asObservable()
-                .subscribe(items -> {
-                        for(Item item : items) {
-                            Log.d("Item", item.getId() + " " + item.getName());
-                            itemAdapter.addItem(item);
-                        }
-                        swipeRefreshLayout.setRefreshing(false);
-                        myRealm.close();
+        RealmResults<Item> results = myRealm.where(Item.class).findAllAsync();
+        results.addChangeListener((items, changeSet) -> {
+            for (Item item : items) {
+                Log.d("Item", item.getId() + " " + item.getName());
+                itemAdapter.addItem(item);
+            }
+            itemAdapter.notifyDataSetChanged();
+            swipeRefreshLayout.setRefreshing(false);
+            emptyList.setVisibility(View.GONE);
+        });
 
-                });
+        if (results.isEmpty())
+            emptyList.setVisibility(View.VISIBLE);
     }
 }

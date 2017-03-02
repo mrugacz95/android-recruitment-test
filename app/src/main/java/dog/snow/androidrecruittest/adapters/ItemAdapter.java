@@ -64,7 +64,6 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
     }
     public void addItem(Item item){
         items.add(item);
-        notifyDataSetChanged();
     }
 
     public void clear() {
