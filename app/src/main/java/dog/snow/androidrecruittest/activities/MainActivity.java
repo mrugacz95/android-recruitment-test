@@ -3,6 +3,7 @@ package dog.snow.androidrecruittest.activities;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
@@ -12,7 +13,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -23,6 +24,7 @@ import dog.snow.androidrecruittest.R;
 import dog.snow.androidrecruittest.adapters.ItemAdapter;
 import dog.snow.androidrecruittest.injection.modules.ApiClientModule;
 import dog.snow.androidrecruittest.models.Item;
+import io.realm.OrderedRealmCollection;
 import io.realm.Realm;
 import io.realm.RealmResults;
 import rx.Observable;
@@ -51,7 +53,10 @@ public class MainActivity extends AppCompatActivity {
         search.clearFocus();
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(new ItemAdapter(this, new ArrayList<>()));
+        recyclerView.setHasFixedSize(true);
+        Realm myRealm = Realm.getDefaultInstance();
+        RealmResults<Item> items =  myRealm.where(Item.class).findAll();
+        recyclerView.setAdapter(new ItemAdapter(this, items, myRealm));
         swipeRefreshLayout.setOnRefreshListener(this::getData);
         search.addTextChangedListener(new TextWatcher() {
             @Override
@@ -61,33 +66,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                Realm myRealm = Realm.getDefaultInstance();
-                ((ItemAdapter) recyclerView.getAdapter()).clear();
-                String query = "*" + charSequence.toString() + "*";
-                RealmResults<Item> realmResults = myRealm.where(Item.class)
-                        .beginGroup()
-                        .like("description", query)
-                        .or()
-                        .like("name", query)
-                        .endGroup()
-                        .findAllAsync();
-                realmResults.addChangeListener((collection, changeSet) -> {
-                    ItemAdapter itemAdapter =((ItemAdapter) recyclerView.getAdapter());
-                    for (Item item1 : realmResults) {
-                        itemAdapter.addItem(item1);
-                    }
-                    itemAdapter.notifyDataSetChanged();
-                    myRealm.close();
-
-                });
             }
 
             @Override
             public void afterTextChanged(Editable editable) {
+                ((ItemAdapter)recyclerView.getAdapter()).filter(editable.toString());
 
             }
         });
-        Realm.init(this);
         getData();
 
     }
@@ -97,54 +83,32 @@ public class MainActivity extends AppCompatActivity {
         apiClient.getItems()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .flatMap(items -> {
+                .first(items -> {
                     myRealm.beginTransaction();
-                    return Observable.from(items);
+                    return true;
                 })
-                .take(10)
-                .subscribe(new Subscriber<Item>() {
+                .subscribe(new Subscriber<List<Item>>() {
                     @Override
                     public void onCompleted() {
-                        emptyList.setVisibility(View.GONE);
                         Log.d("Realm", "complited transaction");
+                        swipeRefreshLayout.setRefreshing(false);
                         myRealm.commitTransaction();
-                        readData();
                         myRealm.close();
                     }
 
                     @Override
                     public void onError(Throwable e) {
                         myRealm.close();
-                        readData();
                     }
 
                     @Override
-                    public void onNext(Item item) {
-                        Log.d("Api response", item.getName());
-                        myRealm.copyToRealmOrUpdate(item);
-
-
+                    public void onNext(List<Item> items) {
+                        myRealm.copyToRealmOrUpdate(items);
+                        emptyList.setVisibility(items.isEmpty()?View.VISIBLE:View.GONE);
                     }
                 });
     }
-
-    private void readData() {
-        ((ItemAdapter) recyclerView.getAdapter()).clear();
-
-        ItemAdapter itemAdapter = ((ItemAdapter) recyclerView.getAdapter());
-        Realm myRealm = Realm.getDefaultInstance();
-        RealmResults<Item> results = myRealm.where(Item.class).findAllAsync();
-        results.addChangeListener((items, changeSet) -> {
-            for (Item item : items) {
-                Log.d("Item", item.getId() + " " + item.getName());
-                itemAdapter.addItem(item);
-            }
-            itemAdapter.notifyDataSetChanged();
-            swipeRefreshLayout.setRefreshing(false);
-            emptyList.setVisibility(View.GONE);
-        });
-
-        if (results.isEmpty())
-            emptyList.setVisibility(View.VISIBLE);
+    public void showEmptyList(boolean isToShow){
+        emptyList.setVisibility(isToShow?View.VISIBLE:View.GONE);
     }
 }

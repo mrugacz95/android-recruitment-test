@@ -4,7 +4,7 @@ apply plugin: 'me.tatarka.retrolambda'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "23.0.3"
+    buildToolsVersion '25.0.1'
     defaultConfig {
         applicationId "dog.snow.androidrecruittest"
         minSdkVersion 16
@@ -35,10 +35,12 @@ dependencies {
     androidTestCompile 'com.android.support.test.espresso:espresso-core:2.2.2'
     androidTestCompile 'com.android.support.test:runner:0.5'
     androidTestCompile 'com.android.support:support-annotations:25.2.0'
+    compile 'com.android.support.constraint:constraint-layout:1.0.0'
+    compile 'io.realm:android-adapters:2.0.0'
     //network
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
     compile 'com.squareup.retrofit2:converter-gson:2.1.0'
-    compile 'com.google.code.gson:gson:2.4'
+    compile 'com.google.code.gson:gson:2.7'
     compile 'com.squareup.okhttp3:logging-interceptor:3.4.1'
     compile 'com.squareup.okhttp3:okhttp:3.4.1'
     //butter knife
@@ -60,7 +62,6 @@ dependencies {
     apt 'com.google.dagger:dagger-compiler:2.7'
     compile 'com.google.dagger:dagger:2.7'
     provided 'javax.annotation:jsr250-api:1.0'
-    compile 'com.android.support.constraint:constraint-layout:1.0.0'
 }
 
 apply plugin: 'realm-android'
