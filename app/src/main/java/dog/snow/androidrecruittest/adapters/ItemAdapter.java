@@ -73,7 +73,8 @@ public class ItemAdapter extends RealmRecyclerViewAdapter<Item,ItemAdapter.ViewH
                 .findAllAsync();
         results.addChangeListener((collection, changeSet) ->{
             ((MainActivity)activity).showEmptyList(results.isEmpty());
-            updateData(collection);
+            if(!getData().equals(collection))
+                updateData(collection);
         });
     }
 
